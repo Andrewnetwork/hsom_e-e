@@ -54,7 +54,7 @@ moteif2 :: [Dur] -> Music a -> Music a
 moteif2 transLs music = musicSeq $ map (`tempo` music) transLs
 
 
--- play $ moteif1 [5,4..0] (mel2 10 sn 4) :+: moteif1 [1..5] (mel2 10 sn 4)
+-- play $ moteif1 [5,4..0] (mel2 50 sn 4) :+: moteif1 [1..5] (mel2 50 sn 4)
 -- play $ moteif1 [0..5] t251
 -- play $ moteif2 [en,] (mel1 2)
 -- play $ transpose 1 (mel2 10 sn 4)
@@ -80,6 +80,18 @@ twoFiveOne key dur = let r' = note dur key
 -- twoFiveOne (C, 4) wn == t251.
 -- play $ (twoFiveOne (C, 4) wn) :=: t251
 
+majorChord :: Music Pitch -> Music Pitch
+majorChord m = m :=: transpose 4 m :=: transpose 7 m
+
+minorChord :: Music Pitch -> Music Pitch
+minorChord m = m :=: transpose 3 m :=: transpose 7 m
+
+
+-- >>> play $ (c 4 hn :=: e 4 hn :=: g 4 hn)
+-- >>> play $ majorChord (c 4 hn)
+-- >>> play $ (e 4 hn :=: g 4 hn :=: b 4 hn)
+-- >>> play $ minorChord (e 4 hn) :=: (e 4 hn :=: g 4 hn :=: b 4 hn)
+
 twinkleTwinkleTreble :: Octave -> Music Pitch
 twinkleTwinkleTreble oct = let m1 = c oct qn :+: c oct qn :+: g oct qn :+: g oct qn 
                                m2 = a oct qn :+: a oct qn :+: g oct hn  
@@ -87,17 +99,28 @@ twinkleTwinkleTreble oct = let m1 = c oct qn :+: c oct qn :+: g oct qn :+: g oct
                                m4 = d oct qn :+: d oct qn :+: c oct hn
                                m5 = g oct qn :+: g oct qn :+: f oct qn :+: f oct qn    
                                m6 = e oct qn :+: e oct qn :+: d oct hn       
-                               m7 = g oct qn :+: g oct qn :+: f oct qn :+: f oct qn
-                               m8 = e oct qn :+: e oct qn :+: d oct hn 
-                           in  m1 :+: m2 :+: m3 :+: m4 :+: m5 :+: m6 :+: m7 :+: m8 :+: m1 :+: m2 :+: m3 :+: m4
+                               m7 = m5
+                               m8 = m6
+                               m9 = m1 
+                               m10 = m2
+                               m11 = m3
+                               m12 = m4
+                           in  m1 :+: m2 :+: m3 :+: m4 :+: m5 :+: m6 :+: m7 :+: m8 :+: m9 :+: m10 :+: m11 :+: m12
 
-twinkleTwinkleBass oct = let m1 = (a oct hn :=: c oct hn :=: e oct hn) :+: (c oct hn :=: e oct hn :=: g oct hn)
-                             m2 = (a oct hn :=: d oct hn :=: f oct hn) :+: (a oct hn :=: c oct hn :=: e oct hn)
-                             m3 = (b oct hn :=: d oct hn :=: f oct hn) :+: (a oct hn :=: c oct hn :=: e oct hn)
-                         in  m1 :+: m2 :+: m3
--- >>> play $ twinkleTwinkleTreble 5
--- >>> play $ twinkleTwinkleBass 5
--- >>> play $ (twinkleTwinkleTreble 5) :=: (twinkleTwinkleBass 5)
+
+twinkleTwinkleBass :: Octave -> Music Pitch
+twinkleTwinkleBass oct = let m1 = majorChord (c oct hn) :+: minorChord (e oct hn) 
+                             m2 = (c oct hn) :=: (f oct hn) :=: (a oct hn)
+                         in  m1 :+: m2
+
+-- >>> play $ twinkleTwinkleTreble 4
+-- >>> play $ twinkleTwinkleBass 4
+-- >>> play $ (twinkleTwinkleTreble 4) :=: (twinkleTwinkleBass 3)
 -- >>> play $ twinkleTwinkleTreble 5 :=: twinkleTwinkleTreble 4 :=: twinkleTwinkleTreble 3 :=: twinkleTwinkleTreble 2 :=: twinkleTwinkleTreble 1
 -- >>> play $ twinkleTwinkleTreble (-1) :=: twinkleTwinkleTreble 8
--- >>> play $ Modify (Instrument Flute) (twinkleTwinkleTreble 5)
+-- >>> play $ Modify (Instrument ChoirAahs) (twinkleTwinkleTreble 5)
+-- >>> play $ Modify (Tempo 2) (twinkleTwinkleTreble 5)
+-- >>> play $ Modify (KeySig G Major) (twinkleTwinkleTreble 5)
+-- >>> play $ twinkleTwinkleBass 3
+-- >>> play $ majorChord (f 4 hn)
+-- >>> play $ (c 4 hn) :=: (f 4 hn) :=: (a 4 hn)
