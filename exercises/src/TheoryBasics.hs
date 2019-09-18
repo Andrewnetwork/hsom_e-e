@@ -51,27 +51,39 @@ createScale octs dur = musicSeq $ (uncurry <$> [c, d, e, f, g, a, b]) >*< ((, du
 -- play $ createScale [0..8] qn :=: createScale [0..8] en :=: createScale [0..8] sn
 -- play $ createScale [8,7..0] sn
 -- 
-notePlayer :: [NoteConstructor] -> [Octave] -> Dur -> Music Pitch
-notePlayer notes octs dur = musicSeq $ (uncurry <$> notes) >*< ((, dur) <$> octs) 
+notePlayer :: (Functor f1, Functor f2) =>
+              (f1 ((a1, b) -> c) -> f2 (t1, t2) -> [Music a2])
+              -> f1 (a1 -> b -> c) 
+              -> f2 t1 -> t2 -> Music a2 
+notePlayer playOp notes octs dur = musicSeq $ (uncurry <$> notes) `playOp` ((, dur) <$> octs) 
 
-notePlayer' :: [Octave -> Music Pitch] -> [Octave] -> Music Pitch
-notePlayer' notes octs = musicSeq $ notes >*< octs
-
--- play $ notePlayer [c, d, e, f] [1,2,3] qn
-
--- noteSplitter :: ([Octave -> Dur -> Music Pitch], Dur) -> ([Octave -> Dur -> Music Pitch], Dur)
--- noteSplitter (noteConstructors,dur) = (noteConstructors >>= \x -> replicate 2 x, dur/2)
--- playSplitNotes :: ()
 noteSplitter :: [Octave -> Dur -> Music Pitch] -> [Octave -> Dur -> Music Pitch]
 noteSplitter fs = fs >>= \f -> [\oct dur -> f oct (dur/2), \oct dur -> f oct (dur/2)]
 
 
 splitOverOctaves :: [NoteConstructor] -> Dur -> [[Octave]] -> Music Pitch
-splitOverOctaves notes dur octs = snd $ foldl (\(n,m) o -> (noteSplitter n, notePlayer n o dur :=: m)) (notes,rest 0) octs 
+splitOverOctaves notes dur octs = snd $ foldl (\(n,m) o -> (noteSplitter n, notePlayer (<*>) n o dur :=: m)) (notes,rest 0) octs 
+
+twinkleRedux = play $ splitOverOctaves [c,c,g,g,a,a,g,f,f,e,e,d,d,c,g,g,f,f,e,e,d,g,g,f,f,e,e,d,c,c,g,g,a,a,g,f,f,e,e,d,d,c] 
+                      hn [[6,3,2],[3,1,2],[4,1,4],[1,2,3]]
+
+w1 = splitOverOctaves [e,ef,d,df,es,ff,af,cs] wn [[1,1,2],[3,3,4],[5,5,6],[7,7,8]]
+w2 = splitOverOctaves [e,ef,d,df,es,ff,af,cs] hn [[1,1,2],[3,3,4],[5,5,6],[7,7,8]]
+w3 = splitOverOctaves [e,ef,d,df,es,ff,af,cs] qn [[1,1,2],[3,3,4],[5,5,6],[7,7,8]]
+w4 = splitOverOctaves [e,ef,d,df,es,ff,af,cs] en [[1,1,2],[3,3,4],[5,5,6],[7,7,8]]
+w5 = splitOverOctaves [e,ef,d,df,es,ff,af,cs] sn [[1,1,2],[3,3,4],[5,5,6],[7,7,8]]
+timesRunningOut = play $ w1 :+: w2 :+: w3 :+: w4 :+: w5 
+
+
+wt ls = splitOverOctaves [c,cs,df,ds,cf,c,es,df,cf] qn ls
+wt2 ls = splitOverOctaves [c,c] qn ls
+theRedDance = play $ (Modify (Instrument PercussiveOrgan) $ (wt [[5,5,6]]) :+: (wt [[5,5,6],[3,3,4]]) :+: (wt [[5,5,6],[3,3,4],[1,1,2]] ) :+: (wt [[3,3,4],[5,5,6],[1,1,2]]) :+: (wt [[1,1,2],[3,3,4],[5,5,6]]) 
+                     :+: (wt [[1,1,2],[5,5,6],[3,3,4]]) :+: (wt [[7,7,8],[3,3,4],[5,5,6],[1,1,2]])) :+: 
+                      (Modify (Instrument Gunshot)) (c 4 qn :+: c 4 qn)
 
 -- >>> play $ splitOverOctaves [c,e,g,gf,b] hn [[2,4,2],[4,2,4],[2,4,6],[2,5,3]]
--- >>> play $ splitOverOctaves [c,c,g,g,a,a,g,f,f,e,e,d,d,c,g,g,f,f,e,e,d,g,g,f,f,e,e,d,c,c,g,g,a,a,g,f,f,e,e,d,d,c] qn [[6],[3],[2],[4]]
-
+-- >>> play $ splitOverOctaves [c,c,g,g,a,a,g,f,f,e,e,d,d,c,g,g,f,f,e,e,d,g,g,f,f,e,e,d,c,c,g,g,a,a,g,f,f,e,e,d,d,c] hn [[6,3,2],[3,1,2],[4,1,4],[1,2,3]]
+-- >>> play $ splitOverOctaves [a,b,c,d,e,f,g,g] hn [[6,3,2],[3,1,2],[4,1,4],[1,2,3]]
 
 
 -- let m1 = noteSplitter notes
@@ -86,9 +98,9 @@ splitOverOctaves notes dur octs = snd $ foldl (\(n,m) o -> (noteSplitter n, note
 -- noteSplitter' :: [Octave -> Dur -> Music Pitch] -> [Octave -> Dur -> Music Pitch]
 -- noteSplitter' noteConstructors = noteConstructors >>= replicate 2 
 
-tst3 octs =  Modify (Instrument RockOrgan) $  notePlayer [c, c, d, d, b, b, a, a] octs sn 
-tst4 octs = Modify (Instrument TubularBells) $ notePlayer [c, d, b, a] octs en 
-tst5 = tst3 (replicate 8 1) :=: tst3 (replicate 8 7) :=: tst4 [4,4,5,5,4,4,5,5]
+-- tst3 octs =  Modify (Instrument RockOrgan) $  notePlayer [c, c, d, d, b, b, a, a] octs sn 
+-- tst4 octs = Modify (Instrument TubularBells) $ notePlayer [c, d, b, a] octs en 
+-- tst5 = tst3 (replicate 8 1) :=: tst3 (replicate 8 7) :=: tst4 [4,4,5,5,4,4,5,5]
 -- play $ musicSeq $ (replicate 2 tst5) ++ [tst4 [3,4,7]]
 
 -- tst3' :: [Octave] -> Music Pitch
@@ -108,11 +120,11 @@ tst5 = tst3 (replicate 8 1) :=: tst3 (replicate 8 7) :=: tst4 [4,4,5,5,4,4,5,5]
 -- play $ Modify (Instrument Gunshot) $ musicSeq $ (replicate 2 tst5) 
 -- play $ Modify (Instrument RockOrgan) $ musicSeq $ (replicate 2 tst5)
 
-tst6 =  notePlayer [c, d, e, f, g] [1,1] wn 
-tst7 oct n = musicSeq $ concat $ replicate n [c oct wn, c oct qn, c oct wn, c oct qn, e oct wn, e oct qn, es oct wn, e oct qn]
+-- tst6 =  notePlayer [c, d, e, f, g] [1,1] wn 
+-- tst7 oct n = musicSeq $ concat $ replicate n [c oct wn, c oct qn, c oct wn, c oct qn, e oct wn, e oct qn, es oct wn, e oct qn]
 
 -- >>> play $ (Modify (Instrument RockOrgan) $ tst7 2 2) 
 
 drumLine n = musicSeq $ concat $ replicate n [perc AcousticSnare en, perc AcousticSnare en, perc AcousticSnare en, perc SplashCymbal en, perc ClosedHiHat en, perc SplashCymbal en, perc ClosedHiHat en, perc SplashCymbal en]
 
--- >>> play (drumLine 5)
+-- >>> play $ Modify (Tempo 2) (drumLine 5)
